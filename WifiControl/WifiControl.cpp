@@ -95,7 +95,7 @@ namespace Plugin
                         TRACE(Trace::Information, (_T("Scan scheduled for every %d ms"), scanInterval));
                         _controller->ScheduleScan(scanInterval);
                     }
-                    //_controller->Scan();
+                    _controller->Scan();
                 }
             }
         }

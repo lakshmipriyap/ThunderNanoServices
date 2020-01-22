@@ -3,7 +3,8 @@
 
 #include "Module.h"
 #include "Network.h"
-
+#include <core/Queue.h>
+#include "TR.h"
 // Interface specification taken from:
 // https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 
@@ -338,10 +339,11 @@ namespace WPASupplicant {
                         marker = markerEnd;
                         markerEnd = data.ForwardFind('\n', marker + 1);
                         NetworkInfo newEntry;
-                        _parent.Add(Transform(element, newEntry), newEntry);
+//                        _parent.Add(Transform(element, newEntry), newEntry);
                     }
                 }
                 _scanning = false;
+                TRACE_L1("ScanRequest::%s _scanning=%d", __FUNCTION__, _scanning);
 
                 if (_eventReporting != static_cast<uint32_t>(~0)) {
                     _parent.Notify(static_cast<events>(_eventReporting));
@@ -776,12 +778,15 @@ namespace WPASupplicant {
             , _enabled()
             , _error(Core::ERROR_UNAVAILABLE)
             , _callback(nullptr)
-            , _scanRequest(*this)
+            //, _scanRequest(*this)
             , _detailRequest(*this)
             , _networkRequest(*this)
             , _statusRequest(*this)
             , _scanTimer(Core::Thread::DefaultStackSize(), _T("ScanTimer"))
+            , _scanning(false)
+
         {
+            //debugEnable = true;
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
             if (Core::File(remoteName).Exists() == true) {
@@ -858,10 +863,11 @@ namespace WPASupplicant {
         }
         inline bool IsScanning() const
         {
-            _adminLock.Lock();
-            const bool result = _scanRequest.IsScanning();
-            _adminLock.Unlock();
-            return result;
+            //_adminLock.Lock();
+            //const bool result = _scanRequest.IsScanning();
+            //_adminLock.Unlock();
+            //return result;
+            return _scanning;
         }
         inline const string& Current() const
         {
@@ -878,20 +884,22 @@ namespace WPASupplicant {
         {
             uint32_t result = Core::ERROR_INPROGRESS;
 
-            _adminLock.Lock();
-            const bool activated = _scanRequest.Activated();
-            _adminLock.Unlock();
+            //_adminLock.Lock();
+            //const bool activated = _scanRequest.Activated();
+            //_adminLock.Unlock();
+            //if (activated == true) {
 
-            if (activated == true) {
+            if (!_scanning) {
+                _scanning = true;
                 result = Core::ERROR_NONE;
                 CustomRequest exchange(string(_TXT("SCAN")));
 
                 Submit(&exchange);
 
                 if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                    _adminLock.Lock();
-                    _scanRequest.Aborted();
-                    _adminLock.Unlock();
+                    //_adminLock.Lock();
+                    //_scanRequest.Aborted();
+                    //_adminLock.Unlock();
                     result = Core::ERROR_UNAVAILABLE;
                 }
 
@@ -1631,9 +1639,9 @@ namespace WPASupplicant {
         }
         // These methods (add/add/update) are assumed to be running in a locked context.
         // Completion of requests are running in a locked context, so oke to update maps/lists
-        void Clear() {
-            _networks.clear();
-        };
+        //void Clear() {
+        //    _networks.clear();
+        //};
         void Add(const uint64_t& bssid, const NetworkInfo& entry);
         void Add(const string& ssid, const bool current, const uint64_t& bssid);
         void Update(const string& status);
@@ -1711,12 +1719,16 @@ namespace WPASupplicant {
         EnabledContainer _enabled;
         uint32_t _error;
         Core::IDispatchType<const events>* _callback;
-        ScanRequest _scanRequest;
+        //ScanRequest _scanRequest;
         DetailRequest _detailRequest;
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
         Core::TimerType<ScanTimer> _scanTimer;
         uint32_t _scanInterval;
+        bool _scanning;
+        clock_t _scanStartTime;
+        uint16_t _added, _removed;
+
     };
 }
 } // namespace WPEFramework::WPASupplicant
