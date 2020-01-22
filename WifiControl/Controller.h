@@ -4,7 +4,6 @@
 #include "Module.h"
 #include "Network.h"
 #include <core/Queue.h>
-#include "TR.h"
 // Interface specification taken from:
 // https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 
