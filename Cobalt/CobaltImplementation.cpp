@@ -125,6 +125,11 @@ private:
               _url = config.Url.Value();
             }
 
+            string startURL;
+            if (Core::SystemInfo::GetEnvironment("COBALT_START_URL", startURL)) {
+                _url = startURL;
+            }
+
             Run();
             return result;
         }
@@ -145,7 +150,8 @@ private:
     private:
         virtual uint32_t Worker()
         {
-            const char* argv[] = {"Cobalt", _url.c_str()};
+            const std::string cmd_url = "--url=" + _url;
+            const char* argv[] = {"Cobalt", cmd_url.c_str()};
             while (IsRunning() == true) {
                 StarboardMain(2, const_cast<char**>(argv));
             }
